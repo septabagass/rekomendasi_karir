@@ -11,7 +11,7 @@ sns.set(style="darkgrid")
 # ==========================================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("all_data_bersih.csv", sep=None, engine='python')
+    df = pd.read_csv("dashboard/all_data_bersih.csv", sep=None, engine='python')
     return df
 
 df = load_data()
