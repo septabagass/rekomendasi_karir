@@ -30,7 +30,7 @@ df.columns = df.columns.str.lower()
 # SIDEBAR
 # ==========================================
 with st.sidebar:
-    st.sidebar.image("Logo.png", width=250)
+    st.sidebar.image("dashboard/Logo.png", width=250)
 
     st.title("Filter Dashboard")
     
