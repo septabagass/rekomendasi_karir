@@ -37,8 +37,8 @@ def buat_kartu_metrik(judul, nilai, is_persen=False):
 # ==========================================
 @st.cache_data
 def load_data():
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    csv_file = BASE_DIR / "dataset_bersih.csv"
+    df = pd.read_csv("dataset_bersih.csv")
+    df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
     
     karir_classes = [
         'Artificial Intelligence Engineer', 'Back End Developer', 'Blockchain Developer',
