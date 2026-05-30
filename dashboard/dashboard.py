@@ -37,7 +37,7 @@ def buat_kartu_metrik(judul, nilai, is_persen=False):
 # ==========================================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("dataset_bersih.csv", sep=";")
+    pd.read_csv("data/dataset_bersih.csv")
     df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
     
     karir_classes = [
