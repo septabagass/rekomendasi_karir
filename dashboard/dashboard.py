@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 # ==========================================
 # KONFIGURASI HALAMAN
@@ -33,11 +34,20 @@ def buat_kartu_metrik(judul, nilai, is_persen=False):
     """
 
 # ==========================================
-# LOAD DATA
+# LOAD DATA (DIPERBAIKI UNTUK STREAMLIT CLOUD)
 # ==========================================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("dataset_bersih.csv")
+    # Mengambil jalur path secara dinamis berdasarkan lokasi file dashboard.py ini berada
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, "dataset_bersih.csv")
+    
+    # Membaca data dengan sep=";" sesuai konfigurasi Anda sebelumnya (fallback koma jika gagal)
+    try:
+        df = pd.read_csv(file_path, sep=";")
+    except:
+        df = pd.read_csv(file_path)
+        
     df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
     
     karir_classes = [
@@ -75,7 +85,12 @@ col_magang = "internship_experience" if "internship_experience" in df.columns el
 # SIDEBAR (NAVIGASI & FILTER GLOBAL)
 # ==========================================
 with st.sidebar:
-    st.image("Logo.png", width=250) 
+    # Memuat logo secara dinamis agar aman di Streamlit Cloud
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(current_dir, "Logo.png")
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=250) 
+        
     st.markdown("## 🧭 Navigasi Utama")
     menu = st.radio(
         "Pilih Modul:", 
@@ -155,7 +170,7 @@ if menu == "1. Overview":
             st.subheader("Pengalaman Magang")
             magang_counts = filtered_df[col_magang].value_counts()
             labels = ["Pernah Magang" if val == 1 else "Belum Magang" for val in magang_counts.index]
-            warna_pie = [WARNA_MAGANG[label] for label in labels]
+            warna_pie = [WARNA_MAGANG.get(label, "#333333") for label in labels]
                     
             fig2, ax2 = plt.subplots(figsize=(6, 6))
             wedges, texts, autotexts = ax2.pie(
@@ -241,7 +256,6 @@ elif menu == "3. Career Profiling":
     
     c_col1, c_col2 = st.columns([1, 1.5])
     
-    # MENGAMBIL TOP SKILL SECARA DINAMIS
     top_hard = profil_df[hard_skill_cols].mean().sort_values(ascending=False).head(3)
     top_soft = profil_df[soft_skill_cols].mean().sort_values(ascending=False).head(3)
     
@@ -261,11 +275,9 @@ elif menu == "3. Career Profiling":
         st.markdown(f"<div style='text-align: center; font-weight: bold; color: {WARNA_UTAMA};'>Radar Chart Kompetensi Teratas</div>", unsafe_allow_html=True)
         st.caption("*Catatan: Grafik ini secara dinamis memetakan 3 Hard Skill dan 3 Soft Skill teratas berdasarkan profil karier di samping.*")
         
-        # PERBAIKAN: Kategori radar sekarang terhubung langsung dengan apa yang muncul di teks!
         kategori_radar = top_hard.index.tolist() + top_soft.index.tolist()
         nilai_radar = profil_df[kategori_radar].mean().values.flatten().tolist()
         
-        # Menutup garis lingkaran radar
         nilai_radar += nilai_radar[:1]
         sudut = [n / float(len(kategori_radar)) * 2 * np.pi for n in range(len(kategori_radar))]
         sudut += sudut[:1]
