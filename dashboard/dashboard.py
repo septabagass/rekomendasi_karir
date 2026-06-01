@@ -27,13 +27,20 @@ def buat_kartu_metrik(judul, nilai):
     </div>
     """
 
+
 # ==========================================
 # LOAD DATA & MAPPING
 # ==========================================
 @st.cache_data
 def load_data():
-    # Pastikan nama file di dalam GitHub sama persis (huruf besar/kecilnya)
-    df = pd.read_csv("dataset_bersih.csv", sep=";")
+    # Mendapatkan lokasi folder tempat file dashboard.py ini berada
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    # Menggabungkan lokasi folder dengan nama file CSV
+    file_path = os.path.join(BASE_DIR, "dataset_bersih.csv")
+    
+    # Membaca data menggunakan file_path yang sudah pasti benar
+    df = pd.read_csv(file_path, sep=";")
     
     # Standarisasi nama kolom ke huruf kecil dengan underscore
     df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
