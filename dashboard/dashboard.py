@@ -1,376 +1,186 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 import os
 
 # ==========================================
 # KONFIGURASI HALAMAN
 # ==========================================
-st.set_page_config(page_title="MatchStep AI | Enterprise Dashboard", layout="wide", page_icon="🎓")
-
-# Mengatur tema dasar seaborn agar bersih
-sns.set_theme(style="whitegrid", rc={"axes.spines.top": False, "axes.spines.right": False})
+st.set_page_config(page_title="Dashboard MatchStep AI", layout="wide", page_icon="🎓")
 
 # PALET WARNA PROFESIONAL
 WARNA_UTAMA = "#2C3E50" # Biru gelap (Navy)
-WARNA_AKSEN = "#18BC9C" # Hijau Teal terang
-WARNA_MAGANG = {"Pernah Magang": "#18BC9C", "Belum Magang": "#95A5A6"}
+WARNA_AKSEN = "#18BC9C" # Hijau Teal
 
 # ==========================================
-# FUNGSI KARTU KUSTOM (DIJAMIN TEKS HITAM)
+# FUNGSI KARTU KUSTOM
 # ==========================================
-def buat_kartu_metrik(judul, nilai, is_persen=False):
-    teks_nilai = f"{nilai}%" if is_persen else f"{nilai}"
+def buat_kartu_metrik(judul, nilai):
     return f"""
     <div style="background-color: #ffffff; padding: 20px 15px; border-radius: 8px; 
-                box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; margin-bottom: 15px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; 
                 border-top: 4px solid {WARNA_AKSEN}; border-left: 1px solid #f0f0f0;
-                border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
-        <div style="color: {WARNA_UTAMA}; font-size: 14px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">{judul}</div>
-        <div style="color: #2b2b2b; font-size: 36px; font-weight: 900;">{teks_nilai}</div>
+                border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px;">
+        <div style="color: {WARNA_UTAMA}; font-size: 14px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">{judul}</div>
+        <div style="color: #2b2b2b; font-size: 32px; font-weight: 800;">{nilai}</div>
     </div>
     """
 
 # ==========================================
-# LOAD DATA (DIPERBAIKI UNTUK STREAMLIT CLOUD)
+# LOAD DATA & MAPPING
 # ==========================================
 @st.cache_data
 def load_data():
-    # Mengambil jalur path secara dinamis berdasarkan lokasi file dashboard.py ini berada
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_dir, "dataset_bersih.csv")
+    # Pastikan nama file di dalam GitHub sama persis (huruf besar/kecilnya)
+    df = pd.read_csv("dataset_bersih.csv", sep=";")
     
-    # Membaca data dengan sep=";" sesuai konfigurasi Anda sebelumnya (fallback koma jika gagal)
-    try:
-        df = pd.read_csv(file_path, sep=";")
-    except:
-        df = pd.read_csv(file_path)
-        
+    # Standarisasi nama kolom ke huruf kecil dengan underscore
     df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
     
-    karir_classes = [
-        'Artificial Intelligence Engineer', 'Back End Developer', 'Blockchain Developer',
-        'Business Intelligence Analyst', 'Cloud Architect', 'Computer & Info Research Scientist',
-        'Computer & Info Systems Manager', 'Computer Hardware Engineer', 'Computer Network Architect',
-        'Computer Programmer', 'Computer Science Teacher', 'Computer Systems Analyst',
-        'Computer Systems Manager', 'Cybersecurity Analyst', 'Data Scientist',
-        'Database Administrator', 'DevOps Engineer', 'Digital Marketing Specialist',
-        'Embedded Systems Engineer', 'Front End Developer', 'Full Stack Developer',
-        'Game Developer', 'IT Consultant', 'IT Project Manager',
-        'IT Sales Professional', 'IT Support Specialist', 'Machine Learning Engineer',
-        'Mobile App Developer', 'Network Administrator', 'Network Engineer',
-        'Quality Assurance Engineer', 'Research Scientist', 'Software Developer',
-        'Software Engineer', 'Software Tester', 'Systems Analyst',
-        'Technical Support Engineer', 'Technical Writer', 'UI/UX Designer',
-        'Web Developer'
+    # Pengelompokan untuk Pertanyaan 3 (Manajerial/Analis vs Teknis)
+    peran_analis_manajerial = [
+        'Business Intelligence Analyst', 'Computer and Information Systems Manager', 
+        'Computer Systems Analyst', 'Computer Systems Manager', 'Cybersecurity Analyst', 
+        'Data Scientist', 'IT Consultant', 'IT Project Manager', 'IT Sales Professional', 
+        'Systems Analyst', 'Research Scientist', 'Computer and Information Research Scientist'
     ]
-    map_karir = {i: karir for i, karir in enumerate(karir_classes)}
-    df['career_goals'] = df['career_goals'].map(map_karir)
+    
+    df['kategori_peran'] = df['career_goals'].apply(
+        lambda x: 'Manajerial & Analis' if x in peran_analis_manajerial else 'Teknis Murni'
+    )
+    
     return df
 
 df = load_data()
 
-# Mendefinisikan kelompok kolom
-hard_skill_cols = [c for c in ['python', 'java', 'c++', 'javascript', 'c#', 'php', 'ruby', 'swift', 'go', 'rust', 'others', 'software_development_experience', 'database_management', 'networking_skills', 'web_development_experience'] if c in df.columns]
-soft_skill_cols = [c for c in ['communication_skills', 'problem_solving_abilities', 'teamwork_collaboration', 'time_management', 'adaptability'] if c in df.columns]
-prog_cols = ['python', 'java', 'c++', 'javascript', 'c#', 'php', 'ruby', 'swift', 'go', 'rust']
-
-# Kolom faktual pengalaman
-col_lead = "leadership_experience" if "leadership_experience" in df.columns else None
-col_magang = "internship_experience" if "internship_experience" in df.columns else col_lead
-
 # ==========================================
-# SIDEBAR (NAVIGASI & FILTER GLOBAL)
+# SIDEBAR (FILTERING)
 # ==========================================
 with st.sidebar:
-    # Memuat logo secara dinamis agar aman di Streamlit Cloud
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(current_dir, "Logo.png")
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=250) 
-        
-    st.markdown("## 🧭 Navigasi Utama")
-    menu = st.radio(
-        "Pilih Modul:", 
-        ["1. Overview", "2. Skill Analytics", "3. Career Profiling", "4. Recommendation", "5. Model Evaluation"]
+    # Pengaman: Cek apakah file Logo.png ada di folder GitHub
+    if os.path.exists("Logo.png"):
+        st.image("Logo.png", width=250) 
+    
+    st.title("⚙️ Parameter Filter")
+    
+    # Sinkronisasi opsi selectbox dengan logika if di bawah
+    magang = st.selectbox(
+        "Pengalaman Kepemimpinan/Praktis:", 
+        ["Semua", "Ada Pengalaman (Yes)", "Belum Ada (No)"]
     )
     
     st.divider()
     
-    if menu in ["1. Overview", "2. Skill Analytics"]:
-        st.markdown("### ⚙️ Parameter Filter Data")
-        magang = st.selectbox("Pengalaman Magang:", ["Semua", "Pernah Magang", "Belum Magang"])
-        opsi_karir = df["career_goals"].dropna().unique()
-        career = st.multiselect("Pilih Target Karier:", options=opsi_karir, default=opsi_karir[:8])
-    else:
-        st.info(f"Filter data dinonaktifkan pada menu **{menu}**.")
-        career = df["career_goals"].dropna().unique() 
-        magang = "Semua"
-        
+    opsi_karir = sorted(df["career_goals"].dropna().unique())
+    
+    # Validasi nilai default
+    default_pilihan = [k for k in ['Data Scientist', 'Software Engineer', 'IT Project Manager'] if k in opsi_karir]
+    
+    career = st.multiselect(
+        "Pilih Target Karier:", 
+        options=opsi_karir, 
+        default=default_pilihan if default_pilihan else opsi_karir[:3]
+    )
+    
     st.sidebar.markdown("---")
-    st.sidebar.caption("© 2026 MatchStep AI | Enterprise Dashboard")
+    st.sidebar.caption("© 2026 MatchStep AI | Dashboard Analitik")
 
 # ==========================================
-# LOGIKA FILTER DATA
+# LOGIKA FILTER
 # ==========================================
 filtered_df = df[df["career_goals"].isin(career)].copy()
-if magang == "Pernah Magang" and col_magang:
-    filtered_df = filtered_df[filtered_df[col_magang] == 1]
-elif magang == "Belum Magang" and col_magang:
-    filtered_df = filtered_df[filtered_df[col_magang] == 0]
 
-# Kalkulasi Metrik Global untuk Overview
+if magang == "Ada Pengalaman (Yes)":
+    filtered_df = filtered_df[filtered_df["leadership_experience"] == "Yes"]
+elif magang == "Belum Ada (No)":
+    filtered_df = filtered_df[filtered_df["leadership_experience"] == "No"]
+
+# ==========================================
+# MAIN DASHBOARD
+# ==========================================
+st.title("🎯 Dashboard Analitik MatchStep AI")
+st.markdown("Menganalisis korelasi dan pola keterampilan mahasiswa terhadap target karier.")
+
+# --- KPI METRICS ---
+col1, col2, col3, col4 = st.columns(4)
+prog_cols = ['python', 'java', 'c++', 'javascript', 'c#', 'php', 'ruby', 'swift', 'go', 'rust']
+hard_skill_cols = ['software_development_experience', 'database_management', 'networking_skills', 'web_development_experience']
+soft_skill_cols = ['communication_skills', 'problem_solving_abilities', 'teamwork_collaboration', 'time_management', 'adaptability']
+
 if not filtered_df.empty:
-    jml_mhs = len(filtered_df)
-    jml_karir = filtered_df['career_goals'].nunique()
-    avg_hard = round(filtered_df[hard_skill_cols].mean().mean(), 2) if hard_skill_cols else 0
-    avg_soft = round(filtered_df[soft_skill_cols].mean().mean(), 2) if soft_skill_cols else 0
-    pct_magang = round((filtered_df[col_magang] == 1).sum() / jml_mhs * 100, 1) if col_magang else 0
-    pct_lead = round((filtered_df[col_lead] == 1).sum() / jml_mhs * 100, 1) if col_lead else 0
+    avg_prog = round(filtered_df[prog_cols].mean().mean(), 1)
+    avg_soft = round(filtered_df[soft_skill_cols].mean().mean(), 1)
 else:
-    jml_mhs, jml_karir, avg_hard, avg_soft, pct_magang, pct_lead = 0, 0, 0, 0, 0, 0
+    avg_prog, avg_soft = 0, 0
 
-# ==========================================
-# KONTEN HALAMAN BERDASARKAN MENU
-# ==========================================
+col1.markdown(buat_kartu_metrik("Data Terfilter", len(filtered_df)), unsafe_allow_html=True)
+col2.markdown(buat_kartu_metrik("Karier Dipilih", len(career)), unsafe_allow_html=True)
+col3.markdown(buat_kartu_metrik("Rata-rata Skor Coding", avg_prog), unsafe_allow_html=True)
+col4.markdown(buat_kartu_metrik("Rata-rata Skor Soft Skill", avg_soft), unsafe_allow_html=True)
 
-if menu == "1. Overview":
-    st.title("📊 Executive Summary")
-    st.markdown("Ringkasan *high-level* profil kompetensi dan kesiapan mahasiswa Teknik Informatika.")
+if not filtered_df.empty:
     
-    if filtered_df.empty:
-        st.warning("⚠️ Data kosong. Sesuaikan filter di sidebar.")
-    else:
-        r1_c1, r1_c2, r1_c3 = st.columns(3)
-        r1_c1.markdown(buat_kartu_metrik("Total Mahasiswa", f"{jml_mhs:,}".replace(",", ".")), unsafe_allow_html=True)
-        r1_c2.markdown(buat_kartu_metrik("Rata-rata Hard Skill", avg_hard), unsafe_allow_html=True)
-        r1_c3.markdown(buat_kartu_metrik("Persentase Magang", pct_magang, is_persen=True), unsafe_allow_html=True)
-
-        r2_c1, r2_c2, r2_c3 = st.columns(3)
-        r2_c1.markdown(buat_kartu_metrik("Total Target Karier", jml_karir), unsafe_allow_html=True)
-        r2_c2.markdown(buat_kartu_metrik("Rata-rata Soft Skill", avg_soft), unsafe_allow_html=True)
-        r2_c3.markdown(buat_kartu_metrik("Pengalaman Leadership", pct_lead, is_persen=True), unsafe_allow_html=True)
+    st.markdown("---")
+    
+    # --- PERTANYAAN 1: BAHASA PEMROGRAMAN ---
+    st.header("1. Profil Bahasa Pemrograman per Target Karier")
+    c1, c2 = st.columns([1.2, 1])
+    
+    with c1:
+        st.subheader("Heatmap Rata-rata Penguasaan")
+        prog_df = filtered_df.groupby('career_goals')[prog_cols].mean().round(2)
+        fig_heat = px.imshow(prog_df, 
+                             labels=dict(x="Bahasa Pemrograman", y="Target Karier", color="Skor"),
+                             color_continuous_scale="Teal",
+                             text_auto=True, aspect="auto")
+        st.plotly_chart(fig_heat, use_container_width=True)
         
-        st.markdown("<hr style='border: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
+    with c2:
+        st.subheader("Pola Kombinasi Bahasa (Radar)")
+        fig_radar = go.Figure()
+        for c in career[:3]: 
+            if c in prog_df.index:
+                mean_scores = prog_df.loc[c].values.tolist()
+                mean_scores.append(mean_scores[0]) 
+                kategori_radar = prog_cols + [prog_cols[0]]
+                
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=mean_scores, theta=kategori_radar, fill='toself', name=c
+                ))
+        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), showlegend=True,
+                                legend=dict(orientation="h", y=-0.2))
+        st.plotly_chart(fig_radar, use_container_width=True)
 
-        left_col, right_col = st.columns([2, 1])
-        with left_col:
-            st.subheader("Distribusi Target Karier")
-            fig1, ax1 = plt.subplots(figsize=(10, 6))
-            sns.countplot(data=filtered_df, y="career_goals", color=WARNA_AKSEN, order=filtered_df["career_goals"].value_counts().index, ax=ax1)
-            for container in ax1.containers:
-                ax1.bar_label(container, padding=5, fontsize=10, color=WARNA_UTAMA, fontweight='bold')
-            ax1.set_xlabel("Jumlah Mahasiswa", fontweight='bold', color=WARNA_UTAMA)
-            ax1.set_ylabel("")
-            st.pyplot(fig1)
+    st.markdown("---")
 
-        with right_col:
-            st.subheader("Pengalaman Magang")
-            magang_counts = filtered_df[col_magang].value_counts()
-            labels = ["Pernah Magang" if val == 1 else "Belum Magang" for val in magang_counts.index]
-            warna_pie = [WARNA_MAGANG.get(label, "#333333") for label in labels]
-                    
-            fig2, ax2 = plt.subplots(figsize=(6, 6))
-            wedges, texts, autotexts = ax2.pie(
-                magang_counts, labels=labels, autopct='%1.1f%%', startangle=90, 
-                colors=warna_pie, wedgeprops=dict(width=0.5, edgecolor='w', linewidth=2), pctdistance=0.75
-            )
-            for autotext in autotexts:
-                autotext.set_color('#ffffff')
-                autotext.set_weight('bold')
-            for text in texts:
-                text.set_color(WARNA_UTAMA)
-                text.set_weight('bold')
-            st.pyplot(fig2)
+    # --- PERTANYAAN 2: HARD SKILL ---
+    st.header("2. Pemetaan Hard Skill Utama terhadap Target Karier")
+    hs_df = filtered_df.groupby('career_goals')[hard_skill_cols].mean().reset_index()
+    hs_melted = hs_df.melt(id_vars='career_goals', var_name='Hard Skill', value_name='Skor Rata-rata')
+    
+    hs_melted['Hard Skill'] = hs_melted['Hard Skill'].str.replace('_', ' ').str.title()
+    
+    fig_bar = px.bar(hs_melted, x='career_goals', y='Skor Rata-rata', color='Hard Skill', 
+                     barmode='group', color_discrete_sequence=px.colors.qualitative.Prism)
+    fig_bar.update_layout(xaxis_title="Target Karier", yaxis_title="Skor Rata-rata (0-10)", legend_title="Jenis Hard Skill")
+    st.plotly_chart(fig_bar, use_container_width=True)
 
-elif menu == "2. Skill Analytics":
-    st.title("📈 Skill Analytics")
-    st.markdown("Eksplorasi mendalam terkait distribusi keahlian teknis (Hard Skill) dan interpersonal (Soft Skill).")
-    
-    if filtered_df.empty:
-        st.warning("⚠️ Data kosong. Sesuaikan filter di sidebar.")
-    else:
-        st.subheader("1. Programming Language Heatmap")
-        prog_df = filtered_df.groupby('career_goals')[prog_cols].mean()
-        fig_heat, ax_heat = plt.subplots(figsize=(12, max(4, len(career)*0.5)))
-        warna_gradasi = sns.light_palette(WARNA_AKSEN, as_cmap=True)
-        sns.heatmap(prog_df, annot=True, fmt=".1f", cmap=warna_gradasi, linewidths=1, linecolor='white', ax=ax_heat)
-        ax_heat.set_ylabel("")
-        ax_heat.set_xlabel("Bahasa Pemrograman", fontweight='bold', color=WARNA_UTAMA)
-        st.pyplot(fig_heat)
-        st.markdown("<br><hr>", unsafe_allow_html=True)
+    st.markdown("---")
 
-        st.subheader("2. Hard Skill Analysis")
-        hard_cols_utama = ['software_development_experience', 'database_management', 'networking_skills']
-        fig_hard, ax_hard = plt.subplots(figsize=(14, 6))
-        hard_melt = filtered_df.melt(id_vars="career_goals", value_vars=hard_cols_utama, var_name="Hard Skill", value_name="Skor")
-        sns.boxplot(data=hard_melt, x="career_goals", y="Skor", hue="Hard Skill", palette="Set2", ax=ax_hard)
-        plt.xticks(rotation=45, ha='right')
-        ax_hard.set_xlabel("")
-        ax_hard.set_ylabel("Skor", fontweight='bold')
-        ax_hard.legend(title="Kategori", bbox_to_anchor=(1.05, 1), loc='upper left')
-        sns.despine()
-        st.pyplot(fig_hard)
-        st.markdown("<br><hr>", unsafe_allow_html=True)
+    # --- PERTANYAAN 3: KEMAMPUAN INTERPERSONAL ---
+    st.header("3. Distribusi Soft Skill: Peran Manajerial/Analis vs Teknis Murni")
+    st.info("Visualisasi ini menggunakan data dari seluruh dataset (tanpa filter target karier di sidebar) untuk melihat perbandingan secara menyeluruh.")
+    
+    soft_df_melted = df.melt(id_vars=['kategori_peran'], value_vars=soft_skill_cols, 
+                             var_name='Soft Skill', value_name='Skor')
+    soft_df_melted['Soft Skill'] = soft_df_melted['Soft Skill'].str.replace('_', ' ').str.title()
+    
+    fig_box = px.box(soft_df_melted, x='Soft Skill', y='Skor', color='kategori_peran',
+                     color_discrete_map={"Manajerial & Analis": WARNA_AKSEN, "Teknis Murni": WARNA_UTAMA})
+    fig_box.update_layout(xaxis_title="Jenis Soft Skill", yaxis_title="Distribusi Skor (0-10)", 
+                          legend_title="Kategori Peran", boxmode="group")
+    st.plotly_chart(fig_box, use_container_width=True)
 
-        st.subheader("3. Soft Skill Analysis")
-        def buat_grafik_violin(nama_kolom, judul_grafik):
-            fig, ax = plt.subplots(figsize=(8, max(4, len(career)*0.6)))
-            sns.violinplot(data=filtered_df, y="career_goals", x=nama_kolom, color=WARNA_AKSEN, inner="quartile", linewidth=1.2, cut=0, ax=ax)
-            ax.set_xlim(0, 10) 
-            ax.set_ylabel("")
-            ax.set_xlabel("Skor Kompetensi (0-10)", fontweight='bold', color=WARNA_UTAMA)
-            ax.set_title(judul_grafik, fontweight='bold', color=WARNA_UTAMA, pad=15)
-            sns.despine()
-            return fig
-
-        v_col1, v_col2 = st.columns(2)
-        with v_col1:
-            st.pyplot(buat_grafik_violin("communication_skills", "A. Communication"))
-            st.pyplot(buat_grafik_violin("teamwork_collaboration", "C. Teamwork"))
-        with v_col2:
-            st.pyplot(buat_grafik_violin("problem_solving_abilities", "B. Problem Solving"))
-            st.pyplot(buat_grafik_violin("adaptability", "D. Adaptability"))
-        st.markdown("<br><hr>", unsafe_allow_html=True)
-
-        st.subheader("4. Correlation Matrix (Hard Skills vs Soft Skills)")
-        st.markdown("Melihat korelasi atau hubungan linier antar kompetensi. Semakin mendekati 1, hubungannya semakin berbanding lurus.")
-        semua_skill = ['python', 'database_management', 'software_development_experience', 'communication_skills', 'problem_solving_abilities', 'adaptability']
-        corr_df = df[semua_skill].corr()
-        fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
-        
-        warna_korelasi = sns.light_palette(WARNA_AKSEN, as_cmap=True)
-        sns.heatmap(corr_df, annot=True, cmap=warna_korelasi, fmt=".2f", linewidths=0.5, ax=ax_corr)
-        st.pyplot(fig_corr)
-
-elif menu == "3. Career Profiling":
-    st.title("🎯 Career Profiling")
-    st.markdown("Pilih satu target karier untuk melihat profil kompetensi ideal berdasarkan agregat data mahasiswa.")
-    
-    opsi_semua_karir = df["career_goals"].dropna().unique()
-    karir_terpilih = st.selectbox("Pilih Target Karier untuk Dianalisis:", sorted(opsi_semua_karir))
-    
-    profil_df = df[df["career_goals"] == karir_terpilih]
-    
-    c_col1, c_col2 = st.columns([1, 1.5])
-    
-    top_hard = profil_df[hard_skill_cols].mean().sort_values(ascending=False).head(3)
-    top_soft = profil_df[soft_skill_cols].mean().sort_values(ascending=False).head(3)
-    
-    with c_col1:
-        st.markdown(f"### Profil: {karir_terpilih}")
-        st.markdown(f"**Total Peminat:** {len(profil_df)} Mahasiswa")
-        
-        st.markdown("**Top 3 Hard Skills (Rata-rata):**")
-        for skill, val in top_hard.items():
-            st.write(f"- {skill.replace('_', ' ').title()}: **{val:.1f}/10**")
-            
-        st.markdown("**Top 3 Soft Skills (Rata-rata):**")
-        for skill, val in top_soft.items():
-            st.write(f"- {skill.replace('_', ' ').title()}: **{val:.1f}/10**")
-            
-    with c_col2:
-        st.markdown(f"<div style='text-align: center; font-weight: bold; color: {WARNA_UTAMA};'>Radar Chart Kompetensi Teratas</div>", unsafe_allow_html=True)
-        st.caption("*Catatan: Grafik ini secara dinamis memetakan 3 Hard Skill dan 3 Soft Skill teratas berdasarkan profil karier di samping.*")
-        
-        kategori_radar = top_hard.index.tolist() + top_soft.index.tolist()
-        nilai_radar = profil_df[kategori_radar].mean().values.flatten().tolist()
-        
-        nilai_radar += nilai_radar[:1]
-        sudut = [n / float(len(kategori_radar)) * 2 * np.pi for n in range(len(kategori_radar))]
-        sudut += sudut[:1]
-        
-        fig_radar, ax_radar = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-        ax_radar.plot(sudut, nilai_radar, color=WARNA_AKSEN, linewidth=2)
-        ax_radar.fill(sudut, nilai_radar, color=WARNA_AKSEN, alpha=0.25)
-        
-        for i in range(len(nilai_radar)-1):
-            ax_radar.text(sudut[i], nilai_radar[i] + 0.5, f"{nilai_radar[i]:.1f}", 
-                          ha='center', va='center', fontweight='bold', color=WARNA_UTAMA, fontsize=9)
-        
-        ax_radar.set_xticks(sudut[:-1])
-        label_rapi = [l.replace('_', '\n').title() for l in kategori_radar]
-        ax_radar.set_xticklabels(label_rapi, color=WARNA_UTAMA, fontsize=9, fontweight='bold')
-        ax_radar.set_yticks([2, 4, 6, 8, 10])
-        ax_radar.set_ylim(0, 10)
-        st.pyplot(fig_radar)
-
-elif menu == "4. Recommendation":
-    st.title("🤖 Rekomendasi Karier (Simulasi Interaktif)")
-    st.markdown("Masukkan metrik *self-assessment* mahasiswa untuk mendapatkan prediksi karier. *(Catatan: Ini menggunakan dummy logic hingga model .h5 diintegrasikan)*.")
-    
-    with st.form("form_prediksi"):
-        st.subheader("Input Kompetensi Mahasiswa")
-        f_col1, f_col2, f_col3 = st.columns(3)
-        
-        with f_col1:
-            skor_python = st.slider("Skor Python (0-10)", 0, 10, 5)
-            skor_db = st.slider("Skor Database (0-10)", 0, 10, 5)
-        with f_col2:
-            skor_comm = st.slider("Communication Skills (0-10)", 0, 10, 5)
-            skor_prob = st.slider("Problem Solving (0-10)", 0, 10, 5)
-        with f_col3:
-            magang_input = st.radio("Pengalaman Magang", ["Ada", "Belum"])
-            lead_input = st.radio("Pengalaman Leadership", ["Ada", "Belum"])
-            
-        submit_btn = st.form_submit_button("Jalankan Prediksi Karier", type="primary")
-        
-    if submit_btn:
-        st.success("✅ Analisis Selesai!")
-        
-        if skor_python >= 8 and skor_db >= 7:
-            prediksi = "Data Scientist / AI Engineer"
-            prob = "92.4%"
-        elif skor_comm >= 8 and skor_prob >= 8:
-            prediksi = "IT Project Manager / IT Consultant"
-            prob = "89.1%"
-        elif skor_db >= 8 and skor_python < 7:
-            prediksi = "Database Administrator"
-            prob = "85.6%"
-        elif skor_python < 5 and skor_db < 5:
-            prediksi = "IT Support / Tech Writer"
-            prob = "78.2%"
-        else:
-            prediksi = "Software Engineer (Full Stack)"
-            prob = "84.5%"
-            
-        st.markdown("### Hasil Prediksi Model:")
-        st.info(f"🎯 **Target Karier Teratas:** {prediksi}")
-        st.markdown(f"**Probabilitas Kesesuaian:** {prob}")
-
-elif menu == "5. Model Evaluation":
-    st.title("🧪 Evaluasi Model Deep Learning")
-    st.markdown("Halaman ini menyajikan laporan performa teknis dari model kecerdasan buatan sebelum di-*deploy*.")
-    
-    st.subheader("1. Accuracy & Loss Metrics")
-    e_col1, e_col2, e_col3 = st.columns(3)
-    e_col1.metric("Training Accuracy", "92.4%", "Model Sangat Fit")
-    e_col2.metric("Validation Accuracy", "87.1%", "Generik Stabil")
-    e_col3.metric("Loss Error (MSE)", "0.14", "-0.02 dari Epoch 50")
-    
-    st.markdown("<hr>", unsafe_allow_html=True)
-    
-    st.subheader("2. Waktu Komputasi & Akurasi (A/B Testing)")
-    st.markdown("Perbandingan performa antara Algoritma Versi A (Rule-Based Lama) vs Versi B (Deep Learning Baru).")
-    
-    fig_ab, ax_ab = plt.subplots(figsize=(10, 4))
-    sns.barplot(
-        x=["Versi A (Rule-Based)", "Versi B (Deep Learning)"], 
-        y=[65.0, 89.5], 
-        palette=["#95A5A6", WARNA_AKSEN], 
-        ax=ax_ab
-    )
-    ax_ab.set_ylabel("Tingkat Akurasi Top-3 (%)", fontweight='bold', color=WARNA_UTAMA)
-    ax_ab.set_ylim(0, 100)
-    
-    for i, v in enumerate([65.0, 89.5]):
-        ax_ab.text(i, v + 2, f"{v}%", ha='center', fontweight='bold', color=WARNA_UTAMA, fontsize=12)
-        
-    sns.despine()
-    st.pyplot(fig_ab)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("3. Kesimpulan Uji Statistik")
-    st.info("Berdasarkan uji *T-Test Independent*, peningkatan akurasi sebesar 24.5% dari algoritma Deep Learning MatchStep AI terbukti **signifikan secara statistik** (p-value < 0.01). Algoritma B dinyatakan lulus uji kelayakan produksi.")
+else:
+    st.warning("⚠️ Data kosong. Silakan tambah opsi Karier atau ubah parameter Pengalaman di panel kiri.")
