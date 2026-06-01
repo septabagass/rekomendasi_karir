@@ -27,25 +27,27 @@ def buat_kartu_metrik(judul, nilai):
     </div>
     """
 
-
 # ==========================================
 # LOAD DATA & MAPPING
 # ==========================================
 @st.cache_data
 def load_data():
-    # Mendapatkan lokasi folder tempat file dashboard.py ini berada
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    
-    # Menggabungkan lokasi folder dengan nama file CSV
     file_path = os.path.join(BASE_DIR, "dataset_bersih.csv")
     
-    # Membaca data menggunakan file_path yang sudah pasti benar
-    df = pd.read_csv(file_path, sep=";")
+    try:
+        df = pd.read_csv(file_path, sep=";")
+    except FileNotFoundError:
+        st.error(f"File dataset_bersih.csv tidak ditemukan di direktori: {BASE_DIR}")
+        return pd.DataFrame()
     
-    # Standarisasi nama kolom ke huruf kecil dengan underscore
+    # Standarisasi nama kolom
     df.columns = df.columns.str.strip().str.replace(" ", "_").str.lower()
     
-    # Pengelompokan untuk Pertanyaan 3 (Manajerial/Analis vs Teknis)
+    # Cleaning data kolom kepemimpinan agar aman dari spasi/huruf kecil
+    if 'leadership_experience' in df.columns:
+        df['leadership_experience'] = df['leadership_experience'].astype(str).str.strip().str.title()
+    
     peran_analis_manajerial = [
         'Business Intelligence Analyst', 'Computer and Information Systems Manager', 
         'Computer Systems Analyst', 'Computer Systems Manager', 'Cybersecurity Analyst', 
@@ -61,17 +63,24 @@ def load_data():
 
 df = load_data()
 
+# Menghentikan eksekusi jika data gagal dimuat (file tidak ada)
+if df.empty:
+    st.stop()
+
 # ==========================================
 # SIDEBAR (FILTERING)
 # ==========================================
 with st.sidebar:
-    # Pengaman: Cek apakah file Logo.png ada di folder GitHub
-    if os.path.exists("Logo.png"):
-        st.image("Logo.png", width=250) 
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(BASE_DIR, "Logo.png")
+    
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=250) 
+    else:
+        st.caption("*(Menunggu Logo.png di-upload ke direktori)*")
     
     st.title("⚙️ Parameter Filter")
     
-    # Sinkronisasi opsi selectbox dengan logika if di bawah
     magang = st.selectbox(
         "Pengalaman Kepemimpinan/Praktis:", 
         ["Semua", "Ada Pengalaman (Yes)", "Belum Ada (No)"]
@@ -80,8 +89,6 @@ with st.sidebar:
     st.divider()
     
     opsi_karir = sorted(df["career_goals"].dropna().unique())
-    
-    # Validasi nilai default
     default_pilihan = [k for k in ['Data Scientist', 'Software Engineer', 'IT Project Manager'] if k in opsi_karir]
     
     career = st.multiselect(
@@ -91,7 +98,7 @@ with st.sidebar:
     )
     
     st.sidebar.markdown("---")
-    st.sidebar.caption("© 2026 MatchStep AI | Dashboard Analitik")
+    st.sidebar.caption("© 2026 MatchStep AI | Pendidikan Teknik Informatika - UNY")
 
 # ==========================================
 # LOGIKA FILTER
@@ -107,7 +114,7 @@ elif magang == "Belum Ada (No)":
 # MAIN DASHBOARD
 # ==========================================
 st.title("🎯 Dashboard Analitik MatchStep AI")
-st.markdown("Menganalisis korelasi dan pola keterampilan mahasiswa terhadap target karier.")
+st.markdown("Eksplorasi korelasi pola keterampilan (*Self-Assessment*) mahasiswa terhadap spesialisasi karier TI.")
 
 # --- KPI METRICS ---
 col1, col2, col3, col4 = st.columns(4)
@@ -141,6 +148,7 @@ if not filtered_df.empty:
                              labels=dict(x="Bahasa Pemrograman", y="Target Karier", color="Skor"),
                              color_continuous_scale="Teal",
                              text_auto=True, aspect="auto")
+        fig_heat.update_layout(xaxis_title="", yaxis_title="")
         st.plotly_chart(fig_heat, use_container_width=True)
         
     with c2:
@@ -158,6 +166,7 @@ if not filtered_df.empty:
         fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), showlegend=True,
                                 legend=dict(orientation="h", y=-0.2))
         st.plotly_chart(fig_radar, use_container_width=True)
+        st.caption("*Menampilkan maksimal 3 karier untuk menjaga keterbacaan grafik.*")
 
     st.markdown("---")
 
@@ -170,14 +179,14 @@ if not filtered_df.empty:
     
     fig_bar = px.bar(hs_melted, x='career_goals', y='Skor Rata-rata', color='Hard Skill', 
                      barmode='group', color_discrete_sequence=px.colors.qualitative.Prism)
-    fig_bar.update_layout(xaxis_title="Target Karier", yaxis_title="Skor Rata-rata (0-10)", legend_title="Jenis Hard Skill")
+    fig_bar.update_layout(xaxis_title="", yaxis_title="Skor Rata-rata (0-10)", legend_title="Jenis Hard Skill")
     st.plotly_chart(fig_bar, use_container_width=True)
 
     st.markdown("---")
 
     # --- PERTANYAAN 3: KEMAMPUAN INTERPERSONAL ---
     st.header("3. Distribusi Soft Skill: Peran Manajerial/Analis vs Teknis Murni")
-    st.info("Visualisasi ini menggunakan data dari seluruh dataset (tanpa filter target karier di sidebar) untuk melihat perbandingan secara menyeluruh.")
+    st.info("Visualisasi ini menggunakan data dari seluruh dataset (tanpa filter target karier di sidebar) untuk melihat perbandingan sebaran skor secara menyeluruh.")
     
     soft_df_melted = df.melt(id_vars=['kategori_peran'], value_vars=soft_skill_cols, 
                              var_name='Soft Skill', value_name='Skor')
@@ -185,9 +194,9 @@ if not filtered_df.empty:
     
     fig_box = px.box(soft_df_melted, x='Soft Skill', y='Skor', color='kategori_peran',
                      color_discrete_map={"Manajerial & Analis": WARNA_AKSEN, "Teknis Murni": WARNA_UTAMA})
-    fig_box.update_layout(xaxis_title="Jenis Soft Skill", yaxis_title="Distribusi Skor (0-10)", 
+    fig_box.update_layout(xaxis_title="", yaxis_title="Distribusi Skor (0-10)", 
                           legend_title="Kategori Peran", boxmode="group")
     st.plotly_chart(fig_box, use_container_width=True)
 
 else:
-    st.warning("⚠️ Data kosong. Silakan tambah opsi Karier atau ubah parameter Pengalaman di panel kiri.")
+    st.warning("⚠️ Data hasil filter kosong. Silakan tambah opsi Karier atau ubah parameter Pengalaman di panel kiri.")
