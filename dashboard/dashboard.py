@@ -83,7 +83,7 @@ with st.sidebar:
     
     magang = st.selectbox(
         "Pengalaman Kepemimpinan/Praktis:", 
-        ["Semua", "Ada Pengalaman (Yes)", "Belum Ada (No)"]
+        ["Semua", "Ada Pengalaman", "Belum Ada Pengalaman"]
     )
     
     st.divider()
@@ -98,7 +98,7 @@ with st.sidebar:
     )
     
     st.sidebar.markdown("---")
-    st.sidebar.caption("© 2026 MatchStep AI | Pendidikan Teknik Informatika - UNY")
+    st.sidebar.caption("© 2026 MatchStep AI | Dashboard")
 
 # ==========================================
 # LOGIKA FILTER
