@@ -134,7 +134,6 @@ if not filtered_df.empty:
         career_counts = filtered_df['career_goals'].value_counts().reset_index()
         career_counts.columns = ['Target Karier', 'Jumlah Mahasiswa']
         
-        # PERBAIKAN: Memaksa teks angka muncul di luar (outside) grafik batang
         fig_career = px.bar(career_counts, x='Jumlah Mahasiswa', y='Target Karier', orientation='h', text='Jumlah Mahasiswa')
         fig_career.update_traces(marker_color=WARNA_SEKUNDER, textposition='outside', textfont_size=13) 
         fig_career.update_layout(height=tinggi_dinamis, yaxis={'categoryorder':'total ascending'}, xaxis_title="", yaxis_title="")
@@ -148,7 +147,6 @@ if not filtered_df.empty:
         fig_pie = px.pie(lead_counts, values='Jumlah', names='Status', hole=0.4,
                          color='Status', color_discrete_map={"Yes": WARNA_AKSEN, "No": WARNA_UTAMA})
         
-        # PERBAIKAN: Memperjelas persentase dengan font warna putih yang tebal
         fig_pie.update_traces(textposition='inside', textinfo='percent+label', 
                               textfont=dict(color='white', size=15, weight='bold'))
         fig_pie.update_layout(height=450, showlegend=False) 
@@ -171,33 +169,21 @@ if not filtered_df.empty:
 
     st.markdown("---")
 
-    # --- BAGIAN 3: HARD SKILL (MENGGUNAKAN TABS) ---
+    # --- BAGIAN 3: HARD SKILL ---
     st.header("3. Pemetaan Hard Skill Utama terhadap Target Karier")
+    st.subheader("Heatmap Rata-rata Skor Hard Skill")
     
     hs_df = filtered_df.groupby('career_goals')[hard_skill_cols].mean().round(2)
     hs_df_display = hs_df.copy()
     hs_df_display.columns = [col.replace('_', ' ').title() for col in hs_df_display.columns]
     
-    tab1, tab2 = st.tabs(["🔥 Heatmap Skor Hard Skill", "📊 Bar Chart Distribusi"])
-    
-    with tab1:
-        fig_heat_hs = px.imshow(hs_df_display, 
-                             labels=dict(x="Jenis Hard Skill", y="Target Karier", color="Skor"),
-                             color_continuous_scale=SKALA_GRADASI,
-                             text_auto=True, aspect="auto")
-                             
-        fig_heat_hs.update_layout(height=tinggi_dinamis, xaxis_title="", yaxis_title="")
-        st.plotly_chart(fig_heat_hs, use_container_width=True)
-
-    with tab2:
-        hs_melted = hs_df.reset_index().melt(id_vars='career_goals', var_name='Hard Skill', value_name='Skor Rata-rata')
-        hs_melted['Hard Skill'] = hs_melted['Hard Skill'].str.replace('_', ' ').str.title()
-        
-        fig_bar = px.bar(hs_melted, x='career_goals', y='Skor Rata-rata', color='Hard Skill', 
-                         barmode='group', color_discrete_sequence=WARNA_KATEGORIKAL)
+    fig_heat_hs = px.imshow(hs_df_display, 
+                         labels=dict(x="Jenis Hard Skill", y="Target Karier", color="Skor"),
+                         color_continuous_scale=SKALA_GRADASI,
+                         text_auto=True, aspect="auto")
                          
-        fig_bar.update_layout(height=tinggi_dinamis, xaxis_title="", yaxis_title="Skor Rata-rata (0-10)", legend_title="Jenis Hard Skill")
-        st.plotly_chart(fig_bar, use_container_width=True)
+    fig_heat_hs.update_layout(height=tinggi_dinamis, xaxis_title="", yaxis_title="")
+    st.plotly_chart(fig_heat_hs, use_container_width=True)
 
     st.markdown("---")
 
