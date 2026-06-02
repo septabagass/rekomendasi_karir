@@ -106,8 +106,10 @@ hard_skill_cols = ['software_development_experience', 'database_management', 'ne
 soft_skill_cols = ['communication_skills', 'problem_solving_abilities', 'teamwork_collaboration', 'time_management', 'adaptability']
 
 if not filtered_df.empty:
-    avg_prog = round(filtered_df[prog_cols].mean().mean(), 1)
-    avg_soft = round(filtered_df[soft_skill_cols].mean().mean(), 1)
+    # PERBAIKAN: Menggunakan .stack().mean() untuk rata-rata global yang akurat 
+    # dan pembulatan 2 desimal (round 2) agar perubahannya terlihat.
+    avg_prog = round(filtered_df[prog_cols].stack().mean(), 2)
+    avg_soft = round(filtered_df[soft_skill_cols].stack().mean(), 2)
 else:
     avg_prog, avg_soft = 0, 0
 
