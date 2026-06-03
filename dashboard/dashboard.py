@@ -89,7 +89,7 @@ with st.sidebar:
     )
     
     st.sidebar.markdown("---")
-    st.sidebar.caption("© 2026 MatchStep AI | Pendidikan Teknik Informatika - UNY")
+    st.sidebar.caption("© 2026 MatchStep AI | Dashboard Karier")
 
 # ==========================================
 # LOGIKA FILTER
@@ -126,7 +126,7 @@ if not filtered_df.empty:
     st.markdown("---")
     
     # --- BAGIAN 1: OVERVIEW DEMOGRAFI & KEPEMIMPINAN ---
-    st.header("1. Overview Demografi Mahasiswa")
+    st.header("Overview Demografi Mahasiswa")
     col_demo1, col_demo2 = st.columns([2, 1]) 
     
     with col_demo1:
@@ -155,7 +155,7 @@ if not filtered_df.empty:
     st.markdown("---")
     
     # --- BAGIAN 2: BAHASA PEMROGRAMAN ---
-    st.header("2. Profil Bahasa Pemrograman per Target Karier")
+    st.header("Profil Bahasa Pemrograman per Target Karier")
     st.subheader("Heatmap Rata-rata Penguasaan")
     prog_df = filtered_df.groupby('career_goals')[prog_cols].mean().round(2)
     
@@ -170,7 +170,7 @@ if not filtered_df.empty:
     st.markdown("---")
 
     # --- BAGIAN 3: HARD SKILL ---
-    st.header("3. Pemetaan Hard Skill Utama terhadap Target Karier")
+    st.header("Pemetaan Hard Skill Utama terhadap Target Karier")
     st.subheader("Heatmap Rata-rata Skor Hard Skill")
     
     hs_df = filtered_df.groupby('career_goals')[hard_skill_cols].mean().round(2)
@@ -188,7 +188,7 @@ if not filtered_df.empty:
     st.markdown("---")
 
     # --- BAGIAN 4: KEMAMPUAN INTERPERSONAL ---
-    st.header("4. Distribusi Soft Skill Utama: Peran Manajerial/Analis vs Teknis Murni")
+    st.header("Distribusi Soft Skill Utama: Peran Manajerial/Analis vs Teknis Murni")
     st.info("Visualisasi membandingkan 3 *Soft Skill* kunci (Communication, Problem Solving, Teamwork) menggunakan data seluruh populasi dataset.")
     
     df_q3 = df[df['kategori_peran'] != 'Lainnya'].copy()
