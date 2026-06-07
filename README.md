@@ -1,6 +1,6 @@
 # 🎓 Dashboard Analitik MatchStep AI
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([https://namalinkdeploymentanda.streamlit.app](https://rekomendasi-karir-mahasiswa.streamlit.app/))
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://rekomendasi-karir-mahasiswa.streamlit.app/)
 *(Klik tombol di atas untuk mengakses dashboard secara langsung)*
 
 Sebuah *dashboard* interaktif yang dibangun menggunakan **Streamlit** untuk mengeksplorasi dan menganalisis korelasi antara pola keterampilan mahasiswa (berdasarkan *self-assessment*) dengan target spesialisasi karier mereka di bidang Teknologi Informasi (TI).
